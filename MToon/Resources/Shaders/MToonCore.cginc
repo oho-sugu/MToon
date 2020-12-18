@@ -53,6 +53,7 @@ struct v2f
     UNITY_FOG_COORDS(7)
     UNITY_SHADOW_COORDS(8)
     //UNITY_VERTEX_INPUT_INSTANCE_ID // necessary only if any instanced properties are going to be accessed in the fragment Shader.
+    UNITY_VERTEX_OUTPUT_STEREO
 };
 
 inline v2f InitializeV2F(appdata_full v, float4 projectedVertex, float isOutline)
@@ -61,6 +62,7 @@ inline v2f InitializeV2F(appdata_full v, float4 projectedVertex, float isOutline
     UNITY_INITIALIZE_OUTPUT(v2f, o);
     UNITY_SETUP_INSTANCE_ID(v);
     //UNITY_TRANSFER_INSTANCE_ID(v, o);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
     
     o.pos = projectedVertex;
     o.posWorld = mul(unity_ObjectToWorld, v.vertex);
