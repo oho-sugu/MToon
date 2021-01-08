@@ -56,7 +56,7 @@ struct v2f
     UNITY_VERTEX_OUTPUT_STEREO
 };
 
-inline v2f InitializeV2F(appdata_full v, float4 projectedVertex, float isOutline)
+inline v2f InitializeV2F(appdata_full v)
 {
     v2f o;
     UNITY_INITIALIZE_OUTPUT(v2f, o);
@@ -64,7 +64,7 @@ inline v2f InitializeV2F(appdata_full v, float4 projectedVertex, float isOutline
     //UNITY_TRANSFER_INSTANCE_ID(v, o);
     UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
     
-    o.pos = projectedVertex;
+    o.pos = UnityObjectToClipPos(v.vertex);
     o.posWorld = mul(unity_ObjectToWorld, v.vertex);
     o.uv0 = v.texcoord;
     half3 worldNormal = UnityObjectToWorldNormal(v.normal);
@@ -74,7 +74,32 @@ inline v2f InitializeV2F(appdata_full v, float4 projectedVertex, float isOutline
     o.tspace0 = half3(worldTangent.x, worldBitangent.x, worldNormal.x);
     o.tspace1 = half3(worldTangent.y, worldBitangent.y, worldNormal.y);
     o.tspace2 = half3(worldTangent.z, worldBitangent.z, worldNormal.z);
-    o.isOutline = isOutline;
+    o.isOutline = 0;
+    o.color = v.color;
+    UNITY_TRANSFER_SHADOW(o, o._ShadowCoord);
+    UNITY_TRANSFER_FOG(o, o.pos);
+    return o;
+}
+
+inline v2f InitializeV2FOutline(appdata_full v)
+{
+    v2f o;
+    UNITY_INITIALIZE_OUTPUT(v2f, o);
+    UNITY_SETUP_INSTANCE_ID(v);
+    //UNITY_TRANSFER_INSTANCE_ID(v, o);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
+    
+    o.pos = CalculateOutlineVertexClipPosition(v);
+    o.posWorld = mul(unity_ObjectToWorld, v.vertex);
+    o.uv0 = v.texcoord;
+    half3 worldNormal = UnityObjectToWorldNormal(v.normal);
+    half3 worldTangent = UnityObjectToWorldDir(v.tangent);
+    half tangentSign = v.tangent.w * unity_WorldTransformParams.w;
+    half3 worldBitangent = cross(worldNormal, worldTangent) * tangentSign;
+    o.tspace0 = half3(worldTangent.x, worldBitangent.x, worldNormal.x);
+    o.tspace1 = half3(worldTangent.y, worldBitangent.y, worldNormal.y);
+    o.tspace2 = half3(worldTangent.z, worldBitangent.z, worldNormal.z);
+    o.isOutline = 1;
     o.color = v.color;
     UNITY_TRANSFER_SHADOW(o, o._ShadowCoord);
     UNITY_TRANSFER_FOG(o, o.pos);
