@@ -81,6 +81,30 @@ inline v2f InitializeV2F(appdata_full v)
     return o;
 }
 
+inline float4 CalculateOutlineVertexClipPosition(appdata_full v)
+{
+    float outlineTex = tex2Dlod(_OutlineWidthTexture, float4(TRANSFORM_TEX(v.texcoord, _MainTex), 0, 0)).r;
+    
+ #if defined(MTOON_OUTLINE_WIDTH_WORLD)
+    float3 worldNormalLength = length(mul((float3x3)transpose(unity_WorldToObject), v.normal));
+    float3 outlineOffset = 0.01 * _OutlineWidth * outlineTex * worldNormalLength * v.normal;
+    float4 vertex = UnityObjectToClipPos(v.vertex + outlineOffset);
+ #elif defined(MTOON_OUTLINE_WIDTH_SCREEN)
+    float4 nearUpperRight = mul(unity_CameraInvProjection, float4(1, 1, UNITY_NEAR_CLIP_VALUE, _ProjectionParams.y));
+    float aspect = abs(nearUpperRight.y / nearUpperRight.x);
+    float4 vertex = UnityObjectToClipPos(v.vertex);
+    float3 viewNormal = mul((float3x3)UNITY_MATRIX_IT_MV, v.normal.xyz);
+    float3 clipNormal = TransformViewToProjection(viewNormal.xyz);
+    float2 projectedNormal = normalize(clipNormal.xy);
+    projectedNormal *= min(vertex.w, _OutlineScaledMaxDistance);
+    projectedNormal.x *= aspect;
+    vertex.xy += 0.01 * _OutlineWidth * outlineTex * projectedNormal.xy * saturate(1 - abs(normalize(viewNormal).z)); // ignore offset when normal toward camera
+ #else
+    float4 vertex = UnityObjectToClipPos(v.vertex);
+ #endif
+    return vertex;
+}
+
 inline v2f InitializeV2FOutline(appdata_full v)
 {
     v2f o;
@@ -104,30 +128,6 @@ inline v2f InitializeV2FOutline(appdata_full v)
     UNITY_TRANSFER_SHADOW(o, o._ShadowCoord);
     UNITY_TRANSFER_FOG(o, o.pos);
     return o;
-}
-
-inline float4 CalculateOutlineVertexClipPosition(appdata_full v)
-{
-    float outlineTex = tex2Dlod(_OutlineWidthTexture, float4(TRANSFORM_TEX(v.texcoord, _MainTex), 0, 0)).r;
-    
- #if defined(MTOON_OUTLINE_WIDTH_WORLD)
-    float3 worldNormalLength = length(mul((float3x3)transpose(unity_WorldToObject), v.normal));
-    float3 outlineOffset = 0.01 * _OutlineWidth * outlineTex * worldNormalLength * v.normal;
-    float4 vertex = UnityObjectToClipPos(v.vertex + outlineOffset);
- #elif defined(MTOON_OUTLINE_WIDTH_SCREEN)
-    float4 nearUpperRight = mul(unity_CameraInvProjection, float4(1, 1, UNITY_NEAR_CLIP_VALUE, _ProjectionParams.y));
-    float aspect = abs(nearUpperRight.y / nearUpperRight.x);
-    float4 vertex = UnityObjectToClipPos(v.vertex);
-    float3 viewNormal = mul((float3x3)UNITY_MATRIX_IT_MV, v.normal.xyz);
-    float3 clipNormal = TransformViewToProjection(viewNormal.xyz);
-    float2 projectedNormal = normalize(clipNormal.xy);
-    projectedNormal *= min(vertex.w, _OutlineScaledMaxDistance);
-    projectedNormal.x *= aspect;
-    vertex.xy += 0.01 * _OutlineWidth * outlineTex * projectedNormal.xy * saturate(1 - abs(normalize(viewNormal).z)); // ignore offset when normal toward camera
- #else
-    float4 vertex = UnityObjectToClipPos(v.vertex);
- #endif
-    return vertex;
 }
 
 float4 frag_forward(v2f i) : SV_TARGET
